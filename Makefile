@@ -1,6 +1,7 @@
 CC            := clang
 CCFLAGS       := -Wall -Wextra -pedantic -std=c17 -g
 PROJECT_FILE  := comprunner
+TEST_FILE     := a2
 
 .DEFAULT_GOAL := default
 .PHONY: default clean bin all run test help
@@ -16,6 +17,7 @@ bin:                  ## compiles project to executable binary
 	@printf '[\e[0;36mINFO\e[0m] Compiling binary...\n'
 	$(CC) $(CCFLAGS) -o $(PROJECT_FILE) $(PROJECT_FILE).c 
 	chmod +x $(PROJECT_FILE)
+	chmod +x $(TEST_FILE)
 
 all: clean bin  ## all of the above
 
