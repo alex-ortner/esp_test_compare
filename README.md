@@ -2,9 +2,9 @@
 
 ## Overall tasks
 
--> take two files
--> push requests into them
--> compare output of both programs
+- take two files
+- push requests into them
+- compare output of both programs
 
 ## TODO:
 - [x] Get io redirected
