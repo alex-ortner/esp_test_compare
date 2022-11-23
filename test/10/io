@@ -1,0 +1,24 @@
+> 
+> Y A B A D 
+> E D L C D 
+> R E U H O 
+> G R E E N 
+> K C A L B 
+> 
+? word to find: 
+< YABAD
+> YABAD, [1][1], horizontal
+? word to find: 
+< YERK
+> YERK: not found
+? word to find: 
+< DON
+> DON, [2][5], vertical
+? word to find: 
+< DDON
+> DDON, [1][5], vertical
+? word to find: 
+< CALB
+> CALB, [5][2], horizontal
+? word to find: 
+! >  

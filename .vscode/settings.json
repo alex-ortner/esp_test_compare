@@ -3,6 +3,9 @@
   "files.associations": {
     "string.h": "c",
     "stubs.h": "c",
-    "stubs-64.h": "c"
+    "stubs-64.h": "c",
+    "poll.h": "c",
+    "signal.h": "c",
+    "unistd.h": "c"
   }
 }

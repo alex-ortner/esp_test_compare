@@ -1,0 +1,123 @@
+int child();
+int parent(int, int[2], int[2]);
+
+int main(){
+  int retValue = 0;
+  int fd[2];
+  int fd2[2];
+
+  if (pipe(fd) == -1)
+    printf("Error occured while opening pipe");
+
+  if (pipe(fd2) == -1)
+    printf("Error occured while opening pipe");
+
+  if (argc > 1)
+  {
+    printf("Got Arguments:\n");
+    for (int i = 0; i < argc; i++)
+    {
+      printf("  %s\n", argv[i]);
+    }
+    fflush(stdout);
+  }
+  printf("Process pid(%d), pipe %d : %d\n", getpid(), fd[0], fd[1]);
+  printf("Process pid(%d), pipe %d : %d\n", getpid(), fd2[0], fd2[1]);
+
+  int pid = fork();
+
+  if (pid == 0)
+  {
+    // try to get child to don't buffer stdout
+    setbuf(stdout, NULL);
+
+    // close unused sides of pipes
+    close(fd[0]);
+    close(fd2[1]);
+
+    // overwrite stdio & stdout
+    dup2(fd[1], 1);
+    dup2(fd2[0], 0);
+
+    // close other pipes
+    close(fd[1]);
+    close(fd2[0]);
+
+    // we should never come back here
+    retValue = child();
+  }
+  else
+  {
+    retValue = parent(pid, fd, fd2);
+    fflush(stdout);
+    close(fd[0]);
+
+    int wstatus;
+    int res = wait(&wstatus);
+    printf("Wstatus %d\n", wstatus);
+    if (WIFEXITED(wstatus))
+    {
+      int status = WEXITSTATUS(wstatus);
+      printf("Process %d exited with Code %d\n", res, status);
+    }
+  }
+}
+
+int child()
+{
+  char *args[] = {"./a2", "A", NULL};
+  return execv("./a2", args);
+}
+
+int parent(int pid, int fd[2], int fd2[2])
+{
+  char buff[256];
+  int respNr = 0;
+  int respMax = 5;
+  int readLen = 0;
+  struct pollfd fds[2];
+  int ret;
+  close(fd[1]);
+  close(fd2[0]);
+  printf("From Child\n\n");
+
+  /* watch stdin for input */
+  fds[0].fd = fd[0];
+  fds[0].events = POLLIN;
+
+  /* watch stdout for ability to write */
+  fds[1].fd = fd2[1];
+  fds[1].events = POLLOUT;
+
+  while ((ret = poll(fds, 2, 100)))
+  {
+    if (!ret)
+    {
+      printf("%d miliseconds elapsed.\n", 500);
+    }
+
+    if (fds[1].revents & POLLOUT)
+    {
+      if (respNr == respMax)
+      {
+        close(fd2[1]);
+        break;
+      }
+      write(fd2[1], responses[respNr], len_responses[respNr]);
+      respNr++;
+    }
+  }
+
+  while ((readLen = read(fd[0], buff, sizeof(buff))) > 0)
+  {
+    write(1, buff, readLen);
+    fflush(stdout);
+    for (int i = 0; i < 256; i++)
+      buff[i] = 0;
+  }
+
+  printf("\n\nParent Error (%d): %d\n", pid, errno);
+  close(fd[0]);
+  close(fd2[1]);
+  return 0;
+}
