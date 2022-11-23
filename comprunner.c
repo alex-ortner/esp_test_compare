@@ -1,7 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <errno.h>
 #include <stdio.h>
-//#include <malloc.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,19 +8,20 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "dyn_malloc.h"
 
 #define TIME_LIMIT 1  // determine time limit
 #define LINE_BUFF_SIZE 512
 #define IO_FILE_SIZE 4096
 #define IO_MAX_LINES 50
-//#define SIZE_IO_LINE sizeof(struct io_comp_line)
-#define SIZE_IO_LINE 544
+#define SIZE_IO_LINE sizeof(struct io_comp_line)
+//#define SIZE_IO_LINE 544
 #define SIZE_IO_LINE_PTR sizeof(struct io_comp_line *)
 #define SIZE_IO_MAX_PTR SIZE_IO_LINE_PTR *IO_MAX_LINES
 
-enum testCaseType { none = 0, OrdIO = 1, Brute = 2 };
+enum testCaseType { none = 0, OrdIO = 1, CompOrdIO = 2, Brute = 3, CompBrute = 4};
 
-enum io_line_type { line_out = 0, line_req = 1, line_in = 2 };
+enum io_line_type { io_line_out = 0, io_line_req = 1, io_line_in = 2 };
 
 struct io_comp_line {
   enum io_line_type type;
@@ -137,7 +137,7 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
     return 3;
   }
   printf("-> start filtering:\n");
-  int resp_count = filter_io_lines(io_lines, line_count, io_resps, line_in);
+  int resp_count = filter_io_lines(io_lines, line_count, io_resps, io_line_in);
 
   int f_stdin[2];
   int f_stdout[2];
@@ -311,11 +311,11 @@ int get_io_lines(struct testCase *test, struct io_comp_line **io_lines) {
   printf("  -> start reading file %p\n", (void *)fptr);
   while (fgets(buff, LINE_BUFF_SIZE, fptr) != NULL) {
     if (buff[0] == '>')
-      io_lines[lines]->type = line_out;
+      io_lines[lines]->type = io_line_out;
     else if (buff[0] == '<')
-      io_lines[lines]->type = line_in;
+      io_lines[lines]->type = io_line_in;
     else if (buff[0] == '?')
-      io_lines[lines]->type = line_req;
+      io_lines[lines]->type = io_line_req;
     else if (buff[0] == '!')
       break;
     else {
