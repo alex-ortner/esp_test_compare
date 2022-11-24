@@ -1,6 +1,9 @@
 int child();
 int parent(int, int[2], int[2]);
 
+const char *responses[] = {"CODE\n", "EESI\n", "REDN\n", "ENO\n", "YARI\n"};
+const int len_responses[] = {5, 5, 5, 4, 5};
+
 int main(){
   int retValue = 0;
   int fd[2];
