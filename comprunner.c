@@ -28,7 +28,12 @@ enum testCaseType {
   CompBrute = 4
 };
 
-enum io_line_type { io_line_out = 0, io_line_req = 1, io_line_in = 2 };
+enum io_line_type {
+  io_line_none = 0,
+  io_line_out = 1,
+  io_line_req = 2,
+  io_line_in = 3
+};
 
 struct io_comp_line {
   enum io_line_type type;
@@ -76,11 +81,10 @@ int test_runner(struct testCase *test, char *out_file, int *out_index);
 int io_pipe_handler(int f_stdin[2], int f_stdout[2], char *out_file,
                     int *out_index, struct io_comp_line **io_resp,
                     int response_count);
-struct io_comp_line ** get_io_lines(struct testCase *test, long*);
-int filter_io_lines(struct io_comp_line **io_lines, int line_count,
-                    struct io_comp_line **out_io_lines,
-                    enum io_line_type filter);
-void mem_free_io_line(struct io_comp_line **io_lines);
+struct io_comp_line **get_io_lines(struct testCase *test, long *);
+struct io_comp_line **filter_io_lines(struct io_comp_line **io_lines,
+                                      int line_count, enum io_line_type filter,
+                                      ssize_t *out_line_count);
 
 int main(int argc, char **argv) {
   struct testCase test_case = {
@@ -128,28 +132,24 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
   setbuf(stdout, NULL);
   printf("-> Initialise Testrunner:\n");
   struct io_comp_line **io_lines = NULL;
-  struct io_comp_line **io_resps =
-      (struct io_comp_line **)(malloc(SIZE_IO_MAX_PTR));
-  if (io_resps == NULL) {
-    free(io_lines);
-    free(io_resps);
-    return -1;
-  }
+  struct io_comp_line **io_resps = NULL;
 
-  long line_count = 0;
+  ssize_t line_count = 0;
   io_lines = get_io_lines(test, &line_count);
   printf("-> got File Input:\n");
+
   if (line_count == -1) {
     free(io_lines);
-    free_array((void **)io_resps, IO_MAX_LINES);
+    free(io_resps);
     return 3;
   }
-  printf("%p", (void *)io_lines);
-  for(long i = 0; i < line_count; i++)
-    printf("> %s", io_lines[i]->line);
+  //for (long i = 0; i < line_count; i++) printf("> %s", io_lines[i]->line);
 
   printf("-> start filtering:\n");
-  int resp_count = filter_io_lines(io_lines, line_count, io_resps, io_line_in);
+  ssize_t resp_count = 0;
+  io_resps = filter_io_lines(io_lines, line_count, io_line_in, &resp_count);
+  //printf("resp_count: %zd\n", resp_count);
+  //for (long i = 0; i < resp_count; i++) printf("> %s", io_resps[i]->line);
 
   int f_stdin[2];
   int f_stdout[2];
@@ -157,7 +157,7 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
   if (pipe(f_stdin) == -1) {
     perror("Failed to open stdin pipe\n");
     free_array((void **)io_lines, line_count);
-    free_array((void **)io_resps, IO_MAX_LINES);
+    free_array((void **)io_resps, resp_count);
     return 2;
   }
 
@@ -165,16 +165,16 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
     perror("Failed to open stdout pipe\n");
     close(f_stdin[0]);
     close(f_stdin[1]);
-    free_array((void **)io_lines, IO_MAX_LINES);
-    free_array((void **)io_resps, IO_MAX_LINES);
+    free_array((void **)io_lines, line_count);
+    free_array((void **)io_resps, resp_count);
     return 2;
   }
 
   pid_t pid = fork();
   if (pid == -1) {
     perror("fork failed");
-    mem_free_io_line(io_lines);
-    mem_free_io_line(io_resps);
+    free_array((void **)io_lines, line_count);
+    free_array((void **)io_resps, resp_count);
     return 1;
   } else if (pid == 0) {
     printf("-> Child generated\n");
@@ -207,8 +207,8 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
                                  io_resps, resp_count);
   if (ret_resp != 0) {
     perror("response handler failed\n");
-    free_array((void **)io_lines, IO_MAX_LINES);
-    free_array((void **)io_resps, IO_MAX_LINES);
+    free_array((void **)io_lines, line_count);
+    free_array((void **)io_resps, resp_count);
     return ret_resp;
   }
   if (timeout == 0) pause();
@@ -216,8 +216,8 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
   int wstatus;
   int result = waitpid(pid, &wstatus, WNOHANG);
   if (timeout && result == 0) {
-    free_array((void **)io_lines, IO_MAX_LINES);
-    free_array((void **)io_resps, IO_MAX_LINES);
+    free_array((void **)io_lines, line_count);
+    free_array((void **)io_resps, resp_count);
     printf("alarm triggered\n");
 
     // child still running, so kill it
@@ -234,8 +234,8 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
       test->ret_val_got = status;
     }
   }
-    free_array((void **)io_lines, line_count);
-    free_array((void **)io_resps, IO_MAX_LINES);
+  free_array((void **)io_lines, line_count);
+  free_array((void **)io_resps, resp_count);
 
   return 0;
 }
@@ -307,9 +307,9 @@ int io_pipe_handler(int f_stdin[2], int f_stdout[2], char *out_file,
   return 0;
 }
 
-struct io_comp_line ** get_io_lines(struct testCase *test, long* line_count) {
+struct io_comp_line **get_io_lines(struct testCase *test, long *line_count) {
   FILE *fptr = fopen(test->test_file, "r");
-  struct io_comp_line ** io_lines = NULL;
+  struct io_comp_line **io_lines = NULL;
   if (fptr == NULL) {
     perror("Could not open file! ");
     return NULL;
@@ -317,12 +317,13 @@ struct io_comp_line ** get_io_lines(struct testCase *test, long* line_count) {
   *line_count = 0;
   char c;
   for (c = getc(fptr); c != EOF; c = getc(fptr))
-    if (c == '\n') // Increment count if this character is newline
+    if (c == '\n')  // Increment count if this character is newline
       (*line_count)++;
 
   printf("  -> Get Memory via Malloc \n");
-  io_lines = (struct io_comp_line **)n_malloc_array(sizeof(struct io_comp_line *), sizeof(struct io_comp_line), *line_count);
-  if(io_lines == NULL){
+  io_lines = (struct io_comp_line **)n_malloc_array(
+      sizeof(struct io_comp_line *), sizeof(struct io_comp_line), *line_count);
+  if (io_lines == NULL) {
     perror("Failed to allocate memory\n");
     return NULL;
   }
@@ -332,9 +333,10 @@ struct io_comp_line ** get_io_lines(struct testCase *test, long* line_count) {
 
   fseek(fptr, 0, SEEK_SET);
   char buff[LINE_BUFF_SIZE];
-  
+
   printf("  -> start reading file %p\n", (void *)fptr);
   while (fgets(buff, LINE_BUFF_SIZE, fptr) != NULL) {
+    io_lines[lines]->type = io_line_none;
     if (buff[0] == '>')
       io_lines[lines]->type = io_line_out;
     else if (buff[0] == '<')
@@ -363,12 +365,20 @@ struct io_comp_line ** get_io_lines(struct testCase *test, long* line_count) {
   return io_lines;
 }
 
-int filter_io_lines(struct io_comp_line **io_lines, int line_count,
-                    struct io_comp_line **out_io_lines,
-                    enum io_line_type filter) {
-  if (out_io_lines == NULL) return -1;
-  for (int i = 0; i < IO_MAX_LINES; i++)
-    out_io_lines[i] = (struct io_comp_line *)(malloc(SIZE_IO_LINE));
+struct io_comp_line **filter_io_lines(struct io_comp_line **io_lines,
+                                      int line_count, enum io_line_type filter,
+                                      ssize_t *out_line_count) {
+  *out_line_count = 0;
+  for (int i = 0; i < line_count; i++) {
+    if (io_lines[i]->type == filter) {
+      (*out_line_count)++;
+    }
+  }
+
+  struct io_comp_line **out_io_lines = (struct io_comp_line **)n_malloc_array(
+      sizeof(struct io_comp_line *), sizeof(struct io_comp_line),
+      *out_line_count);
+  if (out_io_lines == NULL) return NULL;
 
   int lines = 0;
   for (int i = 0; i < line_count; i++) {
@@ -379,18 +389,11 @@ int filter_io_lines(struct io_comp_line **io_lines, int line_count,
       }
       out_io_lines[lines]->line[j] = '\n';
       out_io_lines[lines]->length = j + 1;
-      for (j = j + 1; j < io_lines[i]->length; j++) {
+      for (j = j + 1; j < LINE_BUFF_SIZE; j++) {
         out_io_lines[lines]->line[j] = 0;
       }
       lines++;
     }
   }
-  return lines;
-}
-
-void mem_free_io_line(struct io_comp_line **io_lines) {
-  for (int i = 0; i < IO_MAX_LINES; i++) {
-    free(io_lines[i]);
-  }
-  free(io_lines);
+  return out_io_lines;
 }
