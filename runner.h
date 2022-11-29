@@ -30,9 +30,16 @@ void alarm_handler(int sig) {
   sig += 0;
 }
 
+TestCase **fetchTestCases(char *test_file) {
+  TestCase **test_cases = NULL;
+  test_cases = n_malloc_array(sizeof(TestCase*), sizeof(TestCase), STD_ARRAY_LENGTH);
+
+  
+
+}
+
 int io_pipe_handler(int f_stdin[2], int f_stdout[2], char *out_file,
-                    int *out_index, struct io_comp_line **io_resp,
-                    int response_count) {
+                    int *out_index, IoCompLine **io_resp, int response_count) {
   char buff[LINE_BUFF_SIZE];
   int respNr = 0;
   int readLen = 0;
@@ -86,11 +93,11 @@ int io_pipe_handler(int f_stdin[2], int f_stdout[2], char *out_file,
   return 0;
 }
 
-int test_runner(struct testCase *test, char *out_file, int *out_index) {
+int test_runner(TestCase *test, char *out_file, int *out_index) {
   setbuf(stdout, NULL);
   printf("-> Initialise Testrunner:\n");
-  struct io_comp_line **io_lines = NULL;
-  struct io_comp_line **io_resps = NULL;
+  IoCompLine **io_lines = NULL;
+  IoCompLine **io_resps = NULL;
 
   ssize_t line_count = 0;
   io_lines = get_io_lines(test, &line_count);
@@ -101,13 +108,10 @@ int test_runner(struct testCase *test, char *out_file, int *out_index) {
     free(io_resps);
     return 3;
   }
-  // for (long i = 0; i < line_count; i++) printf("> %s", io_lines[i]->line);
 
   printf("-> start filtering:\n");
   ssize_t resp_count = 0;
   io_resps = filter_io_lines(io_lines, line_count, io_line_in, &resp_count);
-  // printf("resp_count: %zd\n", resp_count);
-  // for (long i = 0; i < resp_count; i++) printf("> %s", io_resps[i]->line);
 
   int f_stdin[2];
   int f_stdout[2];

@@ -1,0 +1,140 @@
+[project_definition]
+binary_path = "./a2"
+makefile_path = "."
+make_targets = ["all"]
+project_name = "a2"
+
+[[testcases]]
+name = "counting is hard"
+type = "OrdIO"
+io_file = "tests/01/io"
+exp_exit_code = 1
+io_prompt = ".*find:.*"
+argv = ["A", "A", "A", "B"]
+protected = false
+
+[[testcases]]
+name = "vertical finding"
+type = "OrdIO"
+io_file = "tests/02/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["E"]
+protected = false
+
+[[testcases]]
+name = "i like repetition"
+type = "OrdIO"
+io_file = "tests/03/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["E"]
+protected = false
+
+[[testcases]]
+name = "i don't really want to play"
+type = "OrdIO"
+io_file = "tests/04/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["A"]
+protected = false
+
+[[testcases]]
+name = "quick win"
+type = "OrdIO"
+io_file = "tests/05/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["A"]
+protected = false
+
+[[testcases]]
+name = "too long"
+type = "OrdIO"
+io_file = "tests/06/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["A"]
+protected = false
+
+[[testcases]]
+name = "those are also letters"
+type = "OrdIO"
+io_file = "tests/07/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["C"]
+protected = false
+
+[[testcases]]
+name = "bonus"
+type = "OrdIO"
+io_file = "tests/08/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["E"]
+protected = false
+
+[[testcases]]
+name = "Only A letter"
+type = "OrdIO"
+io_file = "tests/09/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["D"]
+protected = false
+
+[[testcases]]
+name = "No answer is also an answer"
+type = "OrdIO"
+io_file = "tests/10/io"
+exp_exit_code = 1
+io_prompt = ".*find:.*"
+argv = []
+protexted = false
+
+[[testcases]]
+name = "doInEeDlOwErOrUpPeR"
+type = "OrdIO"
+io_file = "tests/11/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["a"]
+protexted = false
+
+[[testcases]]
+name = "A-E is not enough"
+type = "OrdIO"
+io_file = "tests/12/io"
+exp_exit_code = 3
+io_prompt = ".*find:.*"
+argv = ["h"]
+protexted = false
+
+[[testcases]]
+name = "we need more fields"
+type = "OrdIO"
+io_file = "tests/13/io"
+exp_exit_code = 2
+io_prompt = ".*find:.*"
+argv = ["AB"]
+protexted = false
+
+[[testcases]]
+name = "Must continue testing"
+type = "OrdIO"
+io_file = "tests/14/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["E"]
+protexted = false
+
+[[testcases]]
+name = "Test must go oonnnn"
+type = "OrdIO"
+io_file = "tests/15/io"
+exp_exit_code = 0
+io_prompt = ".*find:.*"
+argv = ["E"]
+protexted = false
